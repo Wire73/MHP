@@ -3,13 +3,13 @@ from tkinter import filedialog, ttk, messagebox
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
+import matplotlib.dates as mdates
+from datetime import datetime
 class MonitorApp:
     def  __init__(self, root):
         self.root = root
         self.root.title("Monitor de Temperatura y Presión")
         self.root.geometry("800x600")
-
         self.setup_ui()
 
     def setup_ui(self):
@@ -39,6 +39,9 @@ class MonitorApp:
             #cargar archivo en un data frame
             df = pd.read_csv(filepath, header = None, names = ["Tiempo", "Temperatura", "Presión"])
 
+            #convertir la comlumna de tiempo a formato 24hrs (datetime.time)
+            df["Tiempo"] = pd.to_datetime(df["Tiempo"], format = "%H:%M:%S").dt.time
+            
             #limpiar tabla
             for row in self.tree.get_children():
                 self.tree.delete(row)
@@ -47,15 +50,22 @@ class MonitorApp:
             for _, row in df.iterrows():
                 self.tree.insert("", tk.END, values = (row["Tiempo"], row["Temperatura"], row["Presión"]))
             
+            #Graficar correctamente el tiempo (convertir time a datetime)
+            df["Tiempo_dt"] = pd.to_datetime(df["Tiempo"].astype(str))
+            
             #Graficar los datos
             self.ax.clear()
-            self.ax.plot(df["Tiempo"], df["Temperatura"], label = "Temperatura (°C)", color = 'red')
-            self.ax.plot(df["Tiempo"], df["Presión"], label = "Presión (PSI)", color = 'blue')
-            self.ax.set_xlabel("Tiempo")
+            self.ax.plot(df["Tiempo_dt"], df["Temperatura"], label = "Temperatura (°C)", color = 'red')
+            self.ax.plot(df["Tiempo_dt"], df["Presión"], label = "Presión (PSI)", color = 'blue')
+            self.ax.set_xlabel("Hora")
             self.ax.set_ylabel("Valores")
             self.ax.set_title("Temperatura y Presión")
             self.ax.legend()
             self.ax.grid(True)
+            
+            #Mejorar formato X
+            self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+            self.figure.autofmt_xdate()
             self.canvas.draw()
 
         except Exception as e:
