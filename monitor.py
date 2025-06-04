@@ -5,6 +5,40 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.dates as mdates
 from datetime import datetime
+
+# --- INICIO DE SESIÓN ---
+class LoginWindow:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Inicio de Sesión")
+        self.root.geometry("300x200")
+        self.create_widgets()
+        
+    def create_widgets(self):
+        tk.Label(self.root, text = "Usuario:").pack(pady = 5)
+        self.user_entry = tk.Entry(self.root)
+        self.user_entry.pack()
+        
+        tk.Label(self.root, text = "Contraseña:").pack(pady = 5)
+        self.pass_entry = tk.Entry(self.root, show = "*") #Con * se oculta la contraseña
+        self.pass_entry.pack()
+        
+        #Botón para iniciar sesión
+        tk.Button(self.root, text = "Iniciar Sesión", command = self.validate_login).pack(pady = 10)
+        
+    def validate_login(self):
+        usuario = self.user_entry.get()
+        password =self.pass_entry.get()
+        
+        if usuario == "admin" and password == "1234":
+            self.root.destroy() #Cierra ventana de login
+            main_window = tk.Tk() #Crea nueva ventana para la app principal
+            app = MonitorApp(main_window)
+            main_window.mainloop()
+        else:
+            messagebox.showerror("Eror", "Usuario o contraseña incorrectos")
+
+# --- VENTANA INICIAL ---
 class MonitorApp:
     def  __init__(self, root):
         self.root = root
@@ -51,7 +85,7 @@ class MonitorApp:
                 self.tree.insert("", tk.END, values = (row["Tiempo"], row["Temperatura"], row["Presión"]))
             
             #Graficar correctamente el tiempo (convertir time a datetime)
-            df["Tiempo_dt"] = pd.to_datetime(df["Tiempo"].astype(str))
+            df["Tiempo_dt"] = pd.to_datetime(df["Tiempo"].astype(str), format = "%H:%M:%S")
             
             #Graficar los datos
             self.ax.clear()
@@ -72,6 +106,6 @@ class MonitorApp:
             messagebox.showerror("Error", f"No se pudo cargar el archivo: {e}")
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = MonitorApp(root)
-    root.mainloop()
+    login_root = tk.Tk()
+    login_app = LoginWindow(login_root)
+    login_root.mainloop()
