@@ -5,34 +5,39 @@ import subprocess
 from PIL import Image, ImageTk
 import os
 import sys
-from dotenv import load_dotenv
+from dotenv import dotenv_values
+import logging
+
+#Configuración de logs
+logging.basicConfig(
+    filename = 'app.log',
+    level = logging.INFO,
+    format = '%(asctime)s - %(levelname)s - %(message)s' 
+)
 
 #cargar variables
-load_dotenv(dotenv_path = "users.env")
+env_path = os.path.join(os.getcwd(), 'users.env')
+if not os.path.exists(env_path):
+    logging.critical("No se encontró el archivo .env")
+    sys.exit("El archivo .env no existe. No se puede continuar.")
 
-#Función para cargar usuarios
-def cargar_usuarios():
-    usuarios = {}
-    for clave, valor in os.environ.items():
-        if clave.isalpha():
-            usuarios[clave.lower()] = valor
-    return usuarios
+usuarios = {k.lower(): v for k, v in dotenv_values(env_path).items()}
+logging.info("Arhivo .env cargado correctamente")
 
-#Validación del login
 def validate_login(root, user_entry, pass_entry):
-    usuarios = cargar_usuarios()
-    
-    if not usuarios:
-        messagebox.showerror("Error", "No se encontro el archivo de usuarios")
-        return
-
     usuario = user_entry.get().lower()
-    password = pass_entry.get()
+    password = pass_entry.get().lower()
     
     if usuario in usuarios and usuarios[usuario] == password:
+        logging.info(f"Inicio de sesión exitoso - Usuario: '{usuario}'")
         root.destroy()
-        subprocess.Popen([sys.executable, "monitor.py"])
+        
+        try: 
+            subprocess.Popen([sys.executable, "monitor.py"])
+        except Exception as e:
+            logging.error(f"Error al ejecutar programa principal: {e}")
     else:
+        logging.warning(f"Intento de inicio de sesión fallido - Usuario: '{usuario}'")
         messagebox.showerror("Error", "Usuario o contraseña incorrectos")
 
 #Ventana
@@ -55,7 +60,8 @@ def start_login():
         logo = logo.resize((350, 150))
         logo_img = ImageTk.PhotoImage(logo)
         tk.Label(root, image = logo_img, bg = "#FFA500").pack(pady=10)
-    except Exception:
+    except Exception as e:
+        logging.warning(f"Error al cargar el logo: {e}")
         tk.Label(root, text = "[LOGO]", font = ("Arial", 16), bg = "#FFA500").pack(pady=10)
     
     #Nombre de la empresa
