@@ -5,17 +5,28 @@ import subprocess
 from PIL import Image, ImageTk
 import os
 import sys
+from dotenv import load_dotenv
 
-#Diccionario de usuarios y contraseñas
-usuarios = {
-    "admin" : "1234",
-    "zulmar" : "abcd",
-    "andres" : "4321"
-}
+#cargar variables
+load_dotenv(dotenv_path = "users.env")
+
+#Función para cargar usuarios
+def cargar_usuarios():
+    usuarios = {}
+    for clave, valor in os.environ.items():
+        if clave.isalpha():
+            usuarios[clave.lower()] = valor
+    return usuarios
 
 #Validación del login
 def validate_login(root, user_entry, pass_entry):
-    usuario = user_entry.get()
+    usuarios = cargar_usuarios()
+    
+    if not usuarios:
+        messagebox.showerror("Error", "No se encontro el archivo de usuarios")
+        return
+
+    usuario = user_entry.get().lower()
     password = pass_entry.get()
     
     if usuario in usuarios and usuarios[usuario] == password:
@@ -69,3 +80,6 @@ def start_login():
     tk.Label(root, text = "© 2025 MHP Industries", bg = "#FFA500", fg = "white").pack(side = "bottom")
     
     root.mainloop()
+    
+if __name__ == "__main__":
+    start_login()
