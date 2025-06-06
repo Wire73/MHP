@@ -4,3 +4,4 @@ matplotlib
 pyinstaller
 pillow
 python-dotenv
+logging
