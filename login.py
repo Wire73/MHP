@@ -7,6 +7,7 @@ import os
 import sys
 from dotenv import dotenv_values
 import logging
+from estilos import PALETA, FUENTES
 
 #Configuración de logs
 logging.basicConfig(
@@ -51,7 +52,7 @@ def start_login():
     pos_x = int((ancho_pantalla/2) - (ancho_ventana/2))
     pos_y = int((alto_pantalla/2) - (alto_ventana/2))
     root.geometry(f"{ancho_ventana}x{alto_ventana}+{pos_x}+{pos_y}")
-    root.configure(bg = "#FFA500") #Color naranja principal de la empresa
+    root.configure(bg = PALETA["acento"]) #Color naranja principal de la empresa
     
     #logo
     try:
@@ -59,31 +60,35 @@ def start_login():
         logo = Image.open(logo_path)
         logo = logo.resize((350, 150))
         logo_img = ImageTk.PhotoImage(logo)
-        tk.Label(root, image = logo_img, bg = "#FFA500").pack(pady=10)
+        tk.Label(root, image = logo_img, bg = PALETA["acento"]).pack(pady=10)
     except Exception as e:
         logging.warning(f"Error al cargar el logo: {e}")
-        tk.Label(root, text = "[LOGO]", font = ("Arial", 16), bg = "#FFA500").pack(pady=10)
+        tk.Label(root, text = "[LOGO]", font = FUENTES["texto"], bg = PALETA["acento"]).pack(pady=10)
     
     #Nombre de la empresa
-    tk.Label(root, text = "Martillos Hidráulicos de la Península", font = ("Arial", 18, "bold"), bg = "#FFA500", fg = "white").pack()
-    tk.Label(root, text = "Monitoreo temperatura y presión", font = ("Arial", 10), bg = "#FFA500", fg = "white").pack(pady = (0,20))
+    tk.Label(root, text = "Martillos Hidráulicos de la Península", font = FUENTES["titulo"], bg = PALETA["acento"]).pack()
+    tk.Label(root, text = "Monitoreo temperatura y presión", font = FUENTES["subtitulo"], bg = PALETA["acento"]).pack(pady = (0,20))
     
     #Usuario
-    tk.Label(root, text = "Usuario:", font = ("Arial", 12), bg = "#FFA500", fg = "white").pack()
-    user_entry = tk.Entry(root, font = ("Arial", 12))
+    tk.Label(root, text = "Usuario:", font = FUENTES["texto"], bg = PALETA["acento"]).pack()
+    user_entry = tk.Entry(root, font = FUENTES["texto"])
     user_entry.pack(pady = 5)
     
     #Contraseña
-    tk.Label(root, text = "Contraseña:", font = ("Arial", 12), bg = "#FFA500", fg = "white").pack()
-    pass_entry = tk.Entry(root, show = "*", font = ("Arial", 12))
+    tk.Label(root, text = "Contraseña:", font = FUENTES["texto"], bg = PALETA["acento"]).pack()
+    pass_entry = tk.Entry(root, show = "*", font = FUENTES["texto"])
     pass_entry.pack(pady = 5)
     
     #botón
-    tk.Button(root, text = "Iniciar Sesión", font = ("Arial", 12), bg = "white", fg = "#FFA500", command = lambda: validate_login(root, user_entry, pass_entry)).pack(pady = 20)
+    tk.Button(root, text = "Iniciar Sesión", 
+              font = FUENTES["boton"], bg = PALETA["detalle"], 
+              activebackground = PALETA["hover"] ,
+              borderwidth = 0, relief = "flat", cursor = "hand2", 
+              command = lambda: validate_login(root, user_entry, pass_entry)).pack(pady = 20)
     
     #Pie de página
-    tk.Label(root, text = "Versión 1.0", bg = "#FFA500", fg = "white").pack(side = "bottom", pady = 10)
-    tk.Label(root, text = "© 2025 MHP Industries", bg = "#FFA500", fg = "white").pack(side = "bottom")
+    tk.Label(root, text = "Versión 1.0", bg = PALETA["acento"]).pack(side = "bottom", pady = 10)
+    tk.Label(root, text = "© 2025 MHP Industries", bg = PALETA["acento"]).pack(side = "bottom")
     
     root.mainloop()
     
