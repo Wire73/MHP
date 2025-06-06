@@ -46,7 +46,7 @@ class MonitorApp:
 
         #Tabla para mostrar los datos
         style = ttk.Style()
-        style.configure("Treeview.Heading", font = ("Arial", 11, "bold"), background = "#FFA500", foreground = "white")
+        style.configure("Treeview.Heading", font = ("Arial", 11, "bold"), background = "#FFFFFF", foreground = "#2F4F4F")
         style.configure("Treeview", font = ("Arial", 10), rowheight = 25)
         
         self.tree = ttk.Treeview(self.root, columns = ("Tiempo", "Temperatura", "Presión"), show = 'headings')
