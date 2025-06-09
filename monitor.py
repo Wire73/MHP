@@ -8,6 +8,7 @@ import matplotlib.dates as mdates
 from datetime import datetime
 from PIL import Image, ImageTk
 import os
+from estilos import PALETA, FUENTES
 
 # --- VENTANA INICIAL ---
 class MonitorApp:
@@ -60,6 +61,22 @@ class MonitorApp:
                                     font = ("Arial", 12, "bold"), bg = "#F8F6F0", fg = "#2F4F4F")
         self.total_label.pack(pady = (5, 10))
         
+        #Resumen de estadisticas
+        self.stats_label=tk.Label(self.root, text="", font=FUENTES["texto"], bg="#F8F6F0",
+                                  justify="left", fg="#2F4F4F")
+        self.stats_label.pack(pady=(0, 10))
+        
+        #Fecha y Hora de carga
+        self.file_info_label= tk.Label(self.root, text="", font=FUENTES["texto"], bg="#F8F6F0",
+                                       fg="#6E6E6E")
+        self.file_info_label.pack(pady=(0, 10))
+        
+        #botón para exportar resultados
+        self.export_button=tk.Button(self.root, text="Exportar resumen", font=FUENTES["boton"],
+                                     bg="#4682B4", fg="white", activebackground="#5A9BD4",
+                                     command=self.export_summary)
+        self.export_button.pack(pady=(0, 10))
+        
         #Frame para la gráfica
         self.figure = plt.figure(figsize = (5,3), dpi = 100)
         self.ax = self.figure.add_subplot(111)
@@ -67,7 +84,7 @@ class MonitorApp:
         self.canvas.get_tk_widget().pack(fill = tk.BOTH, expand = True, padx = 20, pady = 10)
 
     def load_file(self):
-        filepath = filedialog.askopenfilename(filetypes = [("Archivos de texto", "*.txt")])
+        filepath = filedialog.askopenfilename(filetypes = [("Archivos de texto", "*.csv")])
         if not filepath:
             return
         
@@ -96,6 +113,36 @@ class MonitorApp:
             minutos = int((total_segundos % 3600) // 60)
             self.total_label.config(text = f"Total de horas trabajadas: {horas} h {minutos} min")
             
+            #Calcular estadísticas
+            temp_max = df["Temperatura"].max()
+            temp_max_time = df.loc[df["Temperatura"].idxmax(), "Tiempo"]
+            pres_max = df["Presión"].max()
+            pres_max_time = df.loc[df["Presión"].idxmax(), "Tiempo"]
+            
+            #Media de los datos
+            temp_avg = df["Temperatura"].mean()
+            pres_avg = df["Presión"].mean()
+            
+            self.stats_label.config(
+                text= f"Temperatura Máxima: {temp_max:.2f} °C a las {temp_max_time}\n"
+                      f"Presión Máxima: {pres_max:.2f} PSI a las {pres_max_time}\n"
+                      f"Temperatura Promedio: {temp_avg:.2f} °C\n"
+                      f"Presión Promedio: {pres_avg:.2f} PSI"
+            )
+            
+            now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            self.file_info_label.config(text=f"Archivo cargado el {now}")
+            
+            #Datos a exportar
+            self.stats_data = {
+                "Horas trabajadas":f"{horas} h {minutos} min",
+                "Temperatura máxima":f"{temp_max:.2f} °C a las {temp_max_time}",
+                "Presión máxima":f"{pres_max:.2f} PSI a las {pres_max_time}",
+                "Temperatura promedio":f"{temp_avg:.2f} °C",
+                "Presión promedio":f"{pres_avg:.2f} PSI",
+                "Fecha de carga": now
+            }
+            
             #Graficar los datos
             self.ax.clear()
             self.ax.plot(df["Tiempo_dt"], df["Temperatura"], label = "Temperatura (°C)", color = 'red')
@@ -113,6 +160,21 @@ class MonitorApp:
 
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el archivo: {e}")
+
+    def export_summary(self):
+        if not hasattr(self, "stats_data"):
+            messagebox.showwarning("Advertencia", "No hay datos para exportar.")
+            return
+        file = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if not file:
+            return
+        
+        try:
+            df_summary = pd.DataFrame.from_dict(self.stats_data, orient="index", columns=["Valor"])
+            df_summary.to_csv(file, encoding="utf-8")
+            messagebox.showinfo("Exportado", f"Resumen exportado exitosamente a:\n{file}")
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo exportar el resumen: {e}")
 
 if __name__ == "__main__":
     root = tk.Tk()

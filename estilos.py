@@ -2,17 +2,18 @@
 
 #Paleta de colores
 PALETA = {
-    "fondo":"#FDF6EC",
-    "acento":"#FFA15F",
-    "texto":"#4F4F4F",
-    "hover":"#FFF3B0",
-    "detalle":"#E2F0F7"
+    "fondo":"#fefae0",
+    "acento":"#f4a261",
+    "texto":"#264653",
+    "hover":"#ffb480",
+    "detalle":"#e76f51",
+    "error":"#e63946"
 }
 
 #Fuentes
 FUENTES = {
-    "titulo":("Roboto", 20, "bold"),
-    "subtitulo":("Roboto", 14, "bold"),
-    "texto":("Roboto", 12),
-    "boton":("Roboto", 12, "bold")
+    "titulo":("Helvetica", 20, "bold"),
+    "subtitulo":("Helvetica", 14, "italic"),
+    "texto":("Helvetica", 12),
+    "boton":("Helvetica", 12, "bold")
 }

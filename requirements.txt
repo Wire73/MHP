@@ -5,3 +5,4 @@ pyinstaller
 pillow
 python-dotenv
 logging
+ttkbootstrap
