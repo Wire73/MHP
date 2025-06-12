@@ -8,6 +8,8 @@ import sys
 from dotenv import dotenv_values
 import logging
 from estilos import PALETA, FUENTES
+import sqlite3
+import bcrypt
 
 #Configuración de logs
 logging.basicConfig(
@@ -16,30 +18,35 @@ logging.basicConfig(
     format = '%(asctime)s - %(levelname)s - %(message)s' 
 )
 
-#cargar variables
-env_path = os.path.join(os.getcwd(), 'users.env')
-if not os.path.exists(env_path):
-    logging.critical("No se encontró el archivo .env")
-    sys.exit("El archivo .env no existe. No se puede continuar.")
-
-usuarios = {k.lower(): v for k, v in dotenv_values(env_path).items()}
-logging.info("Arhivo .env cargado correctamente")
-
+#validar login con base de datos
 def validate_login(root, user_entry, pass_entry):
     usuario = user_entry.get().lower()
-    password = pass_entry.get().lower()
+    password = pass_entry.get()
     
-    if usuario in usuarios and usuarios[usuario] == password:
-        logging.info(f"Inicio de sesión exitoso - Usuario: '{usuario}'")
-        root.destroy()
+    if not usuario or not password:
+        messagebox.showerror("Error", "Por favor, complete todos los campos")
+        return
+    
+    try:
+        conn = sqlite3.connect("usuarios.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT password FROM usuarios WHERE usuario = ?", (usuario,))
+        result = cursor.fetchone()
+        conn.close()
         
-        try: 
+        if result and bcrypt.checkpw(password.encode(), result[0]):
+            logging.info(f"Inicio de sesión exitoso - Usuario: '{usuario}'")
+            if not os.path.exists("monitor.py"):
+                messagebox.showerror("Error", "El archivo 'monitor.py' no se encuentra en el directorio actual")
+                return
+            root.destroy()
             subprocess.Popen([sys.executable, "monitor.py"])
-        except Exception as e:
-            logging.error(f"Error al ejecutar programa principal: {e}")
-    else:
-        logging.warning(f"Intento de inicio de sesión fallido - Usuario: '{usuario}'")
-        messagebox.showerror("Error", "Usuario o contraseña incorrectos")
+        else:
+            logging.warning(f"Intento de inicio de sesión fallido - Usuario: '{usuario}'")
+            messagebox.showerror("Error", "Usuario o contraseña incorrectos")
+    except Exception as e:
+        logging.error(f"Error al conectar a la base de datos: {e}")
+        messagebox.showerror("Error", "No se pudo conectar a la base de datos")
 
 #Ventana
 def start_login():
@@ -79,12 +86,30 @@ def start_login():
     pass_entry = tk.Entry(root, show = "*", font = FUENTES["texto"])
     pass_entry.pack(pady = 5)
     
+    #Botón de mostrar/ocultar contraseña
+    def toggle_password():
+        if pass_entry.cget("show") == "":
+            pass_entry.config(show="*")
+            show_button.config(text="Mostrar Contraseña")
+        else:
+            pass_entry.config(show="")
+            show_button.config(text="Ocultar Contraseña")
+    
+    #Botón para mostrar/ocultar contraseña
+    show_button = tk.Button(root, text="Mostrar Contraseña", font=FUENTES["texto"],
+                            command=toggle_password, bg=PALETA["hover"],
+                            bd=0, cursor="hand2")
+    show_button.pack(pady=20)
+    
     #botón
     tk.Button(root, text = "Iniciar Sesión", 
               font = FUENTES["boton"], bg = PALETA["hover"], 
               activebackground = PALETA["detalle"],
               borderwidth = 0, relief = "flat", cursor = "hand2", 
               command = lambda: validate_login(root, user_entry, pass_entry)).pack(pady = 20)
+    
+    #Tecla enter hace login
+    root.bind('<Return>', lambda event: validate_login(root, user_entry, pass_entry))
     
     #Pie de página
     tk.Label(root, text = "Versión 1.0", bg = PALETA["fondo"]).pack(side = "bottom", pady = 10)
