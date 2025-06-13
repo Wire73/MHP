@@ -30,17 +30,18 @@ def validate_login(root, user_entry, pass_entry):
     try:
         conn = sqlite3.connect("usuarios.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT password FROM usuarios WHERE usuario = ?", (usuario,))
+        cursor.execute("SELECT password, rol FROM usuarios WHERE usuario = ?", (usuario,))
         result = cursor.fetchone()
         conn.close()
         
         if result and bcrypt.checkpw(password.encode(), result[0]):
-            logging.info(f"Inicio de sesión exitoso - Usuario: '{usuario}'")
+            rol =  result[1]
+            logging.info(f"Inicio de sesión exitoso - Usuario: '{usuario}', ROl: '{rol}'")
             if not os.path.exists("monitor.py"):
                 messagebox.showerror("Error", "El archivo 'monitor.py' no se encuentra en el directorio actual")
                 return
             root.destroy()
-            subprocess.Popen([sys.executable, "monitor.py"])
+            subprocess.Popen([sys.executable, "monitor.py", rol])
         else:
             logging.warning(f"Intento de inicio de sesión fallido - Usuario: '{usuario}'")
             messagebox.showerror("Error", "Usuario o contraseña incorrectos")
@@ -53,7 +54,7 @@ def start_login():
     root = tk.Tk()
     root.title("Inicio Sesion - MHP")
     ancho_ventana = 600
-    alto_ventana = 500
+    alto_ventana = 650
     ancho_pantalla = root.winfo_screenwidth()
     alto_pantalla = root.winfo_screenheight()
     pos_x = int((ancho_pantalla/2) - (ancho_ventana/2))
@@ -96,16 +97,14 @@ def start_login():
             show_button.config(text="Ocultar Contraseña")
     
     #Botón para mostrar/ocultar contraseña
-    show_button = tk.Button(root, text="Mostrar Contraseña", font=FUENTES["texto"],
-                            command=toggle_password, bg=PALETA["hover"],
-                            bd=0, cursor="hand2")
+    show_button = tk.Button(root, text="Mostrar Contraseña", font=FUENTES["boton"],
+                            command=toggle_password, bg=PALETA["hover"], cursor="hand2", activebackground=PALETA["detalle"])
     show_button.pack(pady=20)
     
     #botón
     tk.Button(root, text = "Iniciar Sesión", 
               font = FUENTES["boton"], bg = PALETA["hover"], 
-              activebackground = PALETA["detalle"],
-              borderwidth = 0, relief = "flat", cursor = "hand2", 
+              activebackground = PALETA["detalle"], cursor = "hand2", 
               command = lambda: validate_login(root, user_entry, pass_entry)).pack(pady = 20)
     
     #Tecla enter hace login

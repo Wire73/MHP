@@ -11,11 +11,14 @@ import os
 import subprocess
 import sys
 from estilos import PALETA, FUENTES
+import sqlite3
+import bcrypt
 
 # --- VENTANA INICIAL ---
 class MonitorApp:
-    def  __init__(self, root):
+    def  __init__(self, root, rol):
         self.root = root
+        self.rol = rol
         self.root.title("Monitor de Temperatura y Presión")
         ancho_ventana = 1000
         alto_ventana = 800
@@ -35,9 +38,11 @@ class MonitorApp:
         file_menu = tk.Menu(menu_bar, tearoff = 0)
         file_menu.add_command(label = "Cargar Archivo", command = self.load_file)
         file_menu.add_command(label = "Exportar Resumen", command = self.export_summary)
+        if self.rol == "admin":
+            file_menu.add_command(label = "Crear Usuario", command = self.crear_usuario)
         file_menu.add_separator()
         file_menu.add_command(label = "Cerrar Sesión", command = self.logout)
-        file_menu.add_command(label = "Salir", command = self.root.quit)
+        file_menu.add_command(label = "Salir", command = self.close)
         menu_bar.add_cascade(label = "Archivo", menu = file_menu)
         
         # Menú Vista
@@ -48,6 +53,54 @@ class MonitorApp:
         menu_bar.add_cascade(label = "Vista", menu = view_menu)
         
         self.root.config(menu = menu_bar)
+    
+    def crear_usuario(self):
+        def guardar_usuario(self):
+            nuevo_usuario = user_entry.get().lower()
+            nueva_contraseña = pass_entry.get()
+            rol = rol_var.get()
+            
+            if not nuevo_usuario or not nueva_contraseña or rol not in ['admin', 'tecnico']:
+                messagebox.showerror("Error", "Por favor, complete todos los campos correctamente")
+                return
+            
+            try:
+                conn = sqlite3.connect("usuarios.db")
+                cursor = conn.cursor()
+                hashed = bcrypt.hashpw(nueva_contraseña.encode(), bcrypt.gensalt())
+                cursor.execute("INSERT INTO usuarios (usuario, password, rol) VALUES (?, ?, ?)", (nuevo_usuario, hashed, rol))
+                conn.commit()
+                conn.close()
+                messagebox.showinfo("Éxito", f"Usuario '{nuevo_usuario}' creado exitosamente con rol '{rol}'")
+                ventana_nueva.destroy()
+            except sqlite3.IntegrityError:
+                messagebox.showerror("Error", f"El usuario '{nuevo_usuario}' ya existe")
+    
+        ventana_nueva = tk.Toplevel()
+        ventana_nueva.title("Crear Nuevo Usuario")
+        ancho_ventana = 300
+        alto_ventana = 250
+        ancho_pantalla = ventana_nueva.winfo_screenwidth()
+        alto_pantalla = ventana_nueva.winfo_screenheight()
+        pos_x = int((ancho_pantalla/2) - (ancho_ventana/2))
+        pos_y = int((alto_pantalla/2) - (alto_ventana/2))
+        ventana_nueva.geometry(f"{ancho_ventana}x{alto_ventana}+{pos_x}+{pos_y}")
+        ventana_nueva.configure(bg = PALETA["fondo"])
+    
+        tk.Label(ventana_nueva, text="Nuevo Usuario:", font=FUENTES["texto"], bg=PALETA["fondo"]).pack(pady=5)
+        user_entry = tk.Entry(ventana_nueva, font=FUENTES["texto"])
+        user_entry.pack()
+        
+        tk.Label(ventana_nueva, text="Nueva Contraseña:", font=FUENTES["texto"], bg=PALETA["fondo"]).pack(pady=5)
+        pass_entry = tk.Entry(ventana_nueva, show="*", font=FUENTES["texto"])
+        pass_entry.pack()
+        
+        tk.Label(ventana_nueva, text="Rol:", font=FUENTES["texto"], bg=PALETA["fondo"]).pack(pady=5)
+        rol_var = tk.StringVar(value='tecnico')
+        tk.OptionMenu(ventana_nueva, rol_var, 'admin', 'tecnico').pack()
+        
+        tk.Button(ventana_nueva, text="Guardar Usuario", command=guardar_usuario, background= PALETA["hover"],
+                font=FUENTES["boton"], activebackground=PALETA["detalle"], cursor="hand2").pack(pady=10)
     
     def setup_ui(self):
         #Logo
@@ -178,6 +231,10 @@ class MonitorApp:
         if messagebox.askyesno("Cerrar Sesión", "¿Está seguro de que desea cerrar sesión?"):
             self.root.destroy()
             subprocess.Popen([sys.executable, "login.py"])
+            
+    def close(self):
+        if messagebox.askyesno("Salir", "¿Está seguro de que desea salir?"):
+            self.root.quit()
     
     def show_both_graphs(self):
         if self.df is None:
@@ -225,6 +282,7 @@ class MonitorApp:
         self.canvas.draw()
 
 if __name__ == "__main__":
+    rol = sys.argv[1] if len(sys.argv) > 1 else "tecnico"
     root = tk.Tk()
-    app = MonitorApp(root)
+    app = MonitorApp(root, rol)
     root.mainloop()
