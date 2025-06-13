@@ -8,6 +8,8 @@ import matplotlib.dates as mdates
 from datetime import datetime
 from PIL import Image, ImageTk
 import os
+import subprocess
+import sys
 from estilos import PALETA, FUENTES
 
 # --- VENTANA INICIAL ---
@@ -17,38 +19,57 @@ class MonitorApp:
         self.root.title("Monitor de Temperatura y Presión")
         ancho_ventana = 1000
         alto_ventana = 800
-        ancho_pantalla = self.root.winfo_screenwidth()
-        alto_pantalla = self.root.winfo_screenheight()
-        pos_x = int((ancho_pantalla/2) - (ancho_ventana/2))
-        pos_y = int((alto_pantalla/2) - (alto_ventana/2))
+        pos_x = int((self.root.winfo_screenwidth()/2) - (ancho_ventana/2))
+        pos_y = int((self.root.winfo_screenheight()/2) - (alto_ventana/2))
         self.root.geometry(f"{ancho_ventana}x{alto_ventana}+{pos_x}+{pos_y}")
-        self.root.configure(bg = "#F8F6F0")
+        self.root.configure(bg = PALETA["fondo"])
+        self.df= None
+        self.stats_data = {}
+        self.create_menu()
         self.setup_ui()
 
+    def create_menu(self):
+        menu_bar = tk.Menu(self.root)
+        
+        #Menú Archivo
+        file_menu = tk.Menu(menu_bar, tearoff = 0)
+        file_menu.add_command(label = "Cargar Archivo", command = self.load_file)
+        file_menu.add_command(label = "Exportar Resumen", command = self.export_summary)
+        file_menu.add_separator()
+        file_menu.add_command(label = "Cerrar Sesión", command = self.logout)
+        file_menu.add_command(label = "Salir", command = self.root.quit)
+        menu_bar.add_cascade(label = "Archivo", menu = file_menu)
+        
+        # Menú Vista
+        view_menu = tk.Menu(menu_bar, tearoff = 0)
+        view_menu.add_command(label = "Gráficas", command = self.show_both_graphs)
+        view_menu.add_command(label = "Gráfica de Presión", command = self.show_pressure_graph)
+        view_menu.add_command(label = "Gráfica de Temperatura", command = self.show_temperature_graph)
+        menu_bar.add_cascade(label = "Vista", menu = view_menu)
+        
+        self.root.config(menu = menu_bar)
+    
     def setup_ui(self):
         #Logo
         try:
             logo_path = os.path.join("img", "logo_empresa.png")
-            logo = Image.open(logo_path)
-            logo = logo.resize((300, 120))
+            logo = Image.open(logo_path).resize((300, 120))
             logo_img = ImageTk.PhotoImage(logo)
-            logo_label = tk.Label(self.root, image = logo_img, bg = "#F8F6F0")
+            logo_label = tk.Label(self.root, image = logo_img, bg = PALETA["fondo"])
             logo_label.image = logo_img
             logo_label.pack(pady = (10, 5))
         except Exception:
-            tk.Label(self.root, text = "[Logo Empresa]", font = ("Arial", 18), bg = "#F8F6F0", fg = "#333").pack()
+            tk.Label(self.root, text = "[Logo Empresa]", font = FUENTES["subtitulo"], 
+                     bg = PALETA["fondo"], fg=PALETA["texto"]).pack()
         
         #Título
-        tk.Label(self.root, text = "Monitoreo de Temperatura y presión", font = ("Arial", 20, "bold"), bg = "#F8F6F0", fg = "#2F4F4F").pack(pady = (5, 15))
-        
-        #Botón para poder cargar archivos
-        self.load_button = tk.Button(self.root, text = "Cargar Archivo de Datos", font = ("Arial", 12, "bold"), bg = "#FFA500", fg = "white", activebackground = "#FFB84D", cursor = "hand2", command = self.load_file)
-        self.load_button.pack(pady = 10)
+        tk.Label(self.root, text = "Monitoreo de Temperatura y presión", font = FUENTES["titulo"], 
+                 bg = PALETA["fondo"], fg = PALETA["texto"]).pack(pady = (5, 10))
 
         #Tabla para mostrar los datos
         style = ttk.Style()
-        style.configure("Treeview.Heading", font = ("Arial", 11, "bold"), background = "#FFFFFF", foreground = "#2F4F4F")
-        style.configure("Treeview", font = ("Arial", 10), rowheight = 25)
+        style.configure("Treeview.Heading", font = FUENTES["texto"])
+        style.configure("Treeview", font = FUENTES["texto"], rowheight = 25)
         
         self.tree = ttk.Treeview(self.root, columns = ("Tiempo", "Temperatura", "Presión"), show = 'headings')
         for col in ("Tiempo", "Temperatura", "Presión"):
@@ -58,70 +79,61 @@ class MonitorApp:
 
         #Horas trabajadas
         self.total_label = tk.Label(self.root, text = "Total de horas trabajadas: 0h",
-                                    font = ("Arial", 12, "bold"), bg = "#F8F6F0", fg = "#2F4F4F")
+                                    font = FUENTES["texto"], bg = "#F8F6F0", fg = "#2F4F4F")
         self.total_label.pack(pady = (5, 10))
         
         #Resumen de estadisticas
-        self.stats_label=tk.Label(self.root, text="", font=FUENTES["texto"], bg="#F8F6F0",
-                                  justify="left", fg="#2F4F4F")
+        self.stats_label=tk.Label(self.root, text="", font=FUENTES["texto"], background=PALETA["fondo"], justify="left")
         self.stats_label.pack(pady=(0, 10))
         
         #Fecha y Hora de carga
-        self.file_info_label= tk.Label(self.root, text="", font=FUENTES["texto"], bg="#F8F6F0",
-                                       fg="#6E6E6E")
+        self.file_info_label= tk.Label(self.root, text="", font=FUENTES["texto"], bg=PALETA["fondo"],
+                                       fg=PALETA["texto"])
         self.file_info_label.pack(pady=(0, 10))
         
-        #botón para exportar resultados
-        self.export_button=tk.Button(self.root, text="Exportar resumen", font=FUENTES["boton"],
-                                     bg="#4682B4", fg="white", activebackground="#5A9BD4",
-                                     command=self.export_summary)
-        self.export_button.pack(pady=(0, 10))
-        
         #Frame para la gráfica
-        self.figure = plt.figure(figsize = (5,3), dpi = 100)
+        self.figure = plt.figure(figsize = (6,3), dpi = 100)
         self.ax = self.figure.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.figure, self.root)
         self.canvas.get_tk_widget().pack(fill = tk.BOTH, expand = True, padx = 20, pady = 10)
 
     def load_file(self):
-        filepath = filedialog.askopenfilename(filetypes = [("Archivos de texto", "*.csv")])
+        filepath = filedialog.askopenfilename(filetypes = [("CSV file", "*.csv")])
         if not filepath:
             return
-        
+    
         try:
             #cargar archivo en un data frame
-            df = pd.read_csv(filepath, header = None, names = ["Tiempo", "Temperatura", "Presión"])
+            self.df = pd.read_csv(filepath, header = None, names = ["Tiempo", "Temperatura", "Presión"])
 
             #convertir la comlumna de tiempo a formato 24hrs (datetime.time)
-            df["Tiempo"] = pd.to_datetime(df["Tiempo"], format = "%H:%M:%S").dt.time
-            df["Tiempo_dt"] = pd.to_datetime(df["Tiempo"].astype(str), format = "%H:%M:%S")
+            self.df["Tiempo"] = pd.to_datetime(self.df["Tiempo"], format = "%H:%M:%S").dt.time
+            self.df["Tiempo_dt"] = pd.to_datetime(self.df["Tiempo"].astype(str), format = "%H:%M:%S")
             
             #limpiar tabla
             for row in self.tree.get_children():
                 self.tree.delete(row)
 
             #Agregar datos a tabla
-            for _, row in df.iterrows():
+            for _, row in self.df.iterrows():
                 self.tree.insert("", tk.END, values = (row["Tiempo"], row["Temperatura"], row["Presión"]))
             
             #Total de horas trabajas agregar
-            inicio = df["Tiempo_dt"].iloc[0]
-            fin = df["Tiempo_dt"].iloc[-1]
-            diferencia = fin - inicio
-            total_segundos = diferencia.total_seconds()
-            horas = int(total_segundos // 3600)
-            minutos = int((total_segundos % 3600) // 60)
-            self.total_label.config(text = f"Total de horas trabajadas: {horas} h {minutos} min")
+            inicio = self.df["Tiempo_dt"].iloc[0]
+            fin = self.df["Tiempo_dt"].iloc[-1]
+            diff = fin - inicio
+            horas, minutos = divmod(diff.total_seconds() // 60, 60)
+            self.total_label.config(text = f"Total de horas trabajadas: {int(horas)}h {int(minutos)}min")
             
             #Calcular estadísticas
-            temp_max = df["Temperatura"].max()
-            temp_max_time = df.loc[df["Temperatura"].idxmax(), "Tiempo"]
-            pres_max = df["Presión"].max()
-            pres_max_time = df.loc[df["Presión"].idxmax(), "Tiempo"]
+            temp_max = self.df["Temperatura"].max()
+            temp_max_time = self.df.loc[self.df["Temperatura"].idxmax(), "Tiempo"]
+            pres_max = self.df["Presión"].max()
+            pres_max_time = self.df.loc[self.df["Presión"].idxmax(), "Tiempo"]
             
             #Media de los datos
-            temp_avg = df["Temperatura"].mean()
-            pres_avg = df["Presión"].mean()
+            temp_avg = self.df["Temperatura"].mean()
+            pres_avg = self.df["Presión"].mean()
             
             self.stats_label.config(
                 text= f"Temperatura Máxima: {temp_max:.2f} °C a las {temp_max_time}\n"
@@ -143,26 +155,13 @@ class MonitorApp:
                 "Fecha de carga": now
             }
             
-            #Graficar los datos
-            self.ax.clear()
-            self.ax.plot(df["Tiempo_dt"], df["Temperatura"], label = "Temperatura (°C)", color = 'red')
-            self.ax.plot(df["Tiempo_dt"], df["Presión"], label = "Presión (PSI)", color = 'blue')
-            self.ax.set_xlabel("Hora")
-            self.ax.set_ylabel("Valores")
-            self.ax.set_title("Temperatura y Presión")
-            self.ax.legend()
-            self.ax.grid(True)
+            self.show_both_graphs()
             
-            #Mejorar formato X
-            self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
-            self.figure.autofmt_xdate()
-            self.canvas.draw()
-
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el archivo: {e}")
 
     def export_summary(self):
-        if not hasattr(self, "stats_data"):
+        if not self.stats_data:
             messagebox.showwarning("Advertencia", "No hay datos para exportar.")
             return
         file = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
@@ -170,11 +169,60 @@ class MonitorApp:
             return
         
         try:
-            df_summary = pd.DataFrame.from_dict(self.stats_data, orient="index", columns=["Valor"])
-            df_summary.to_csv(file, encoding="utf-8")
+            pd.DataFrame.from_dict(self.stats_data, orient="index", columns=["Valor"]).to_csv(file, encoding="utf-8")
             messagebox.showinfo("Exportado", f"Resumen exportado exitosamente a:\n{file}")
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo exportar el resumen: {e}")
+            
+    def logout(self):
+        if messagebox.askyesno("Cerrar Sesión", "¿Está seguro de que desea cerrar sesión?"):
+            self.root.destroy()
+            subprocess.Popen([sys.executable, "login.py"])
+    
+    def show_both_graphs(self):
+        if self.df is None:
+            messagebox.showwarning("Advertencia", "No hay datos para mostrar.")
+            return
+        
+        self.ax.clear()
+        self.ax.plot(self.df["Tiempo_dt"], self.df["Temperatura"], label = "Temperatura (°C)", color = 'red')
+        self.ax.plot(self.df["Tiempo_dt"], self.df["Presión"], label = "Presión (PSI)", color = 'blue')
+        self.ax.set_title("Gráfica de Temperatura y Presión")
+        self.ax.set_xlabel("Hora")
+        self.ax.set_ylabel("Valores")
+        self.ax.legend()
+        self.ax.grid(True)
+            
+        #Mejorar formato X
+        self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+        self.figure.autofmt_xdate()
+        self.canvas.draw()
+        
+    def show_pressure_graph(self):
+        if self.df is None:
+            return
+        self.ax.clear()
+        self.ax.plot(self.df["Tiempo_dt"], self.df["Presión"], label = "Presión (PSI)", color = 'blue')
+        self.ax.set_title("Gráfica de Presión")
+        self.ax.set_xlabel("Hora") 
+        self.ax.set_ylabel("Presión (PSI)")
+        self.ax.grid(True)
+        self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+        self.figure.autofmt_xdate()
+        self.canvas.draw()
+        
+    def show_temperature_graph(self):
+        if self.df is None:
+            return
+        self.ax.clear()
+        self.ax.plot(self.df["Tiempo_dt"], self.df["Temperatura"], label = "Temperatura (°C)", color = 'red')
+        self.ax.set_title("Gráfica de Temperatura")
+        self.ax.set_xlabel("Hora")
+        self.ax.set_ylabel("Temperatura (°C)")
+        self.ax.grid(True)
+        self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+        self.figure.autofmt_xdate()
+        self.canvas.draw()
 
 if __name__ == "__main__":
     root = tk.Tk()
