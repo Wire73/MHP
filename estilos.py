@@ -7,7 +7,8 @@ PALETA = {
     "texto":"#264653",
     "hover":"#ffb480",
     "detalle":"#e76f51",
-    "error":"#e63946"
+    "error":"#e63946",
+    "fondo2" :"#E2DEC4"
 }
 
 #Fuentes
