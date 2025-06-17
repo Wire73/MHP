@@ -4,6 +4,5 @@ matplotlib
 pyinstaller
 Pillow
 python-dotenv
-logging
 ttkbootstrap
 bcrypt
