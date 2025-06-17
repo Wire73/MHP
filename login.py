@@ -1,120 +1,109 @@
-#Librerias a utilizar
-import tkinter as tk
-from tkinter import messagebox
-import subprocess
-from PIL import Image, ImageTk
-import os
-import sys
-from dotenv import dotenv_values
-import logging
-from estilos import PALETA, FUENTES
-import sqlite3
-import bcrypt
-
-#Configuración de logs
-logging.basicConfig(
-    filename = 'app.log',
-    level = logging.INFO,
-    format = '%(asctime)s - %(levelname)s - %(message)s' 
+#Modulo del login
+import os, sys, sqlite3, bcrypt
+from PyQt6.QtWidgets import (
+    QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, 
+    QMessageBox, QApplication
 )
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import Qt
+from estilos import PALETA, fuente
 
-#validar login con base de datos
-def validate_login(root, user_entry, pass_entry):
-    usuario = user_entry.get().lower()
-    password = pass_entry.get()
+class LoginWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Inicio de Sesión - MHP")
+        self.setFixedSize(600, 650)
+        self.init_ui()
     
-    if not usuario or not password:
-        messagebox.showerror("Error", "Por favor, complete todos los campos")
-        return
-    
-    try:
-        conn = sqlite3.connect("usuarios.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT password, rol FROM usuarios WHERE usuario = ?", (usuario,))
-        result = cursor.fetchone()
-        conn.close()
+    def init_ui(self):
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        if result and bcrypt.checkpw(password.encode(), result[0]):
-            rol =  result[1]
-            logging.info(f"Inicio de sesión exitoso - Usuario: '{usuario}', ROl: '{rol}'")
-            if not os.path.exists("monitor.py"):
-                messagebox.showerror("Error", "El archivo 'monitor.py' no se encuentra en el directorio actual")
-                return
-            root.destroy()
-            subprocess.Popen([sys.executable, "monitor.py", rol])
-        else:
-            logging.warning(f"Intento de inicio de sesión fallido - Usuario: '{usuario}'")
-            messagebox.showerror("Error", "Usuario o contraseña incorrectos")
-    except Exception as e:
-        logging.error(f"Error al conectar a la base de datos: {e}")
-        messagebox.showerror("Error", "No se pudo conectar a la base de datos")
-
-#Ventana
-def start_login():
-    root = tk.Tk()
-    root.title("Inicio Sesion - MHP")
-    ancho_ventana = 600
-    alto_ventana = 650
-    ancho_pantalla = root.winfo_screenwidth()
-    alto_pantalla = root.winfo_screenheight()
-    pos_x = int((ancho_pantalla/2) - (ancho_ventana/2))
-    pos_y = int((alto_pantalla/2) - (alto_ventana/2))
-    root.geometry(f"{ancho_ventana}x{alto_ventana}+{pos_x}+{pos_y}")
-    root.configure(bg = PALETA["fondo"]) 
-    
-    #logo
-    try:
+        #logo
+        logo_lbl = QLabel()
         logo_path = os.path.join("img", "logo_empresa.png")
-        logo = Image.open(logo_path)
-        logo = logo.resize((350, 150))
-        logo_img = ImageTk.PhotoImage(logo)
-        tk.Label(root, image = logo_img, bg = PALETA["fondo"]).pack(pady=10)
-    except Exception as e:
-        logging.warning(f"Error al cargar el logo: {e}")
-        tk.Label(root, text = "[LOGO]", font = FUENTES["texto"], bg = PALETA["fondo"]).pack(pady=10)
+        if os.path.exists(logo_path):
+            pix = QPixmap(logo_path).scaledToWidth(350, Qt.TransformationMode.SmoothTransformation)
+            logo_lbl.setPixmap(pix)
+        logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(logo_lbl)
+        
+        #titulos
+        t1 = QLabel("Martillos Hidráulicos de la Península")
+        t1.setFont(fuente(20, negrita=True))
+        t1.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(t1)
+        
+        t2 = QLabel("Sistema de Gestión de Monitoreo")
+        t2.setFont(fuente(14, italic=True))
+        t2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(t2)
+        
+        #Formulario de login
+        self.user_in = QLineEdit()
+        self.user_in.setPlaceholderText("Usuario")
+        self.user_in.setFont(fuente())
+        self.pwd_in = QLineEdit()
+        self.pwd_in.setPlaceholderText("Contraseña")
+        self.pwd_in.setEchoMode(QLineEdit.EchoMode.Password)
+        self.pwd_in.setFont(fuente())
+        
+        layout.addWidget(self.user_in)
+        layout.addWidget(self.pwd_in)
+        
+        #Mostrar/ocultar contraseña
+        self.btn_toggle = QPushButton("Mostrar/Ocultar contraseña")
+        self.btn_toggle.setFont(fuente())
+        self.btn_toggle.clicked.connect(self.toggle_password)
+        layout.addWidget(self.btn_toggle)
+        
+        #Botón de login
+        btn_login = QPushButton("Iniciar Sesión")
+        btn_login.setFont(fuente(12, negrita=True))
+        btn_login.clicked.connect(self.handle_login)
+        layout.addWidget(btn_login)
+        
+        self.setLayout(layout)
     
-    #Nombre de la empresa
-    tk.Label(root, text = "Martillos Hidráulicos de la Península", font = FUENTES["titulo"], bg = PALETA["fondo"]).pack()
-    tk.Label(root, text = "Monitoreo temperatura y presión", font = FUENTES["subtitulo"], bg = PALETA["fondo"]).pack(pady = (0,20))
-    
-    #Usuario
-    tk.Label(root, text = "Usuario:", font = FUENTES["texto"], bg = PALETA["fondo"]).pack()
-    user_entry = tk.Entry(root, font = FUENTES["texto"])
-    user_entry.pack(pady = 5)
-    
-    #Contraseña
-    tk.Label(root, text = "Contraseña:", font = FUENTES["texto"], bg = PALETA["fondo"]).pack()
-    pass_entry = tk.Entry(root, show = "*", font = FUENTES["texto"])
-    pass_entry.pack(pady = 5)
-    
-    #Botón de mostrar/ocultar contraseña
-    def toggle_password():
-        if pass_entry.cget("show") == "":
-            pass_entry.config(show="*")
-            show_button.config(text="Mostrar Contraseña")
+    def toggle_password(self):
+        if self.pwd_in.echoMode() == QLineEdit.EchoMode.Normal:
+            self.pwd_in.setEchoMode(QLineEdit.EchoMode.Password)
+            self.btn_toggle.setText("Mostrar contraseña")
         else:
-            pass_entry.config(show="")
-            show_button.config(text="Ocultar Contraseña")
+            self.pwd_in.setEchoMode(QLineEdit.EchoMode.Normal)
+            self.btn_toggle.setText("Ocultar contraseña")
     
-    #Botón para mostrar/ocultar contraseña
-    show_button = tk.Button(root, text="Mostrar Contraseña", font=FUENTES["boton"],
-                            command=toggle_password, bg=PALETA["hover"], cursor="hand2", activebackground=PALETA["detalle"])
-    show_button.pack(pady=20)
-    
-    #botón
-    tk.Button(root, text = "Iniciar Sesión", 
-              font = FUENTES["boton"], bg = PALETA["hover"], 
-              activebackground = PALETA["detalle"], cursor = "hand2", 
-              command = lambda: validate_login(root, user_entry, pass_entry)).pack(pady = 20)
-    
-    #Tecla enter hace login
-    root.bind('<Return>', lambda event: validate_login(root, user_entry, pass_entry))
-    
-    #Pie de página
-    tk.Label(root, text = "Versión 1.0", bg = PALETA["fondo"]).pack(side = "bottom", pady = 10)
-    tk.Label(root, text = "© 2025 MHP Industries", bg = PALETA["fondo"]).pack(side = "bottom")
-    
-    root.mainloop()
-    
+    def handle_login(self):
+        usuario = self.user_in.text().lower()
+        password = self.pwd_in.text()
+        
+        if not usuario or not password:
+            QMessageBox.warning(self, "Error", "Por favor, complete todos los campos.")
+            return
+        
+        try:
+            conn = sqlite3.connect("usuarios.db")
+            c = conn.cursor()
+            c.execute("SELECT password, rol FROM usuarios WHERE usuario = ?", (usuario,))
+            row = c.fetchone()
+            conn.close()
+            
+            if row and bcrypt.checkpw(password.encode(), row[0]):
+                rol = row[1]
+                QMessageBox.information(self, "Éxito", f"Bienvenido, {usuario} ({rol})!")
+                from monitor import MonitorWindow
+                self.hide()
+                self.monitor = MonitorWindow(usuario, rol)
+                self.monitor.show()
+            else:
+                QMessageBox.critical(self, "Error", "Usuario o contraseña incorrectos.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al conectar a la base de datos: {str(e)}")
+
 if __name__ == "__main__":
-    start_login()
+    import sys
+    from PyQt6.QtWidgets import QApplication
+    app = QApplication(sys.argv)
+    window = LoginWindow()
+    window.show()
+    sys.exit(app.exec())

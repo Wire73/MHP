@@ -1,8 +1,7 @@
-tk
+PyQt6
 pandas
 matplotlib
 pyinstaller
 Pillow
 python-dotenv
-ttkbootstrap
 bcrypt

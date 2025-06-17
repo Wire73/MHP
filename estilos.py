@@ -1,4 +1,5 @@
 #Estilos, colores, fuentes que se usaron durante este proyecto
+from PyQt6.QtGui import QFont, QColor
 
 #Paleta de colores
 PALETA = {
@@ -12,9 +13,8 @@ PALETA = {
 }
 
 #Fuentes
-FUENTES = {
-    "titulo":("Helvetica", 20, "bold"),
-    "subtitulo":("Helvetica", 14, "italic"),
-    "texto":("Helvetica", 12),
-    "boton":("Helvetica", 12, "bold")
-}
+def fuente(tamaño=12, negrita=False, italic=False):
+    font = QFont("Helvetica", tamaño)
+    font.setBold(negrita)
+    font.setItalic(italic)
+    return font
