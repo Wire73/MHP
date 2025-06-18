@@ -12,6 +12,7 @@ paleta = {
     "boton_press" :"#E2DEC4",
     "fondo_entry":"#F9F7F3",
     "footer": "#888888",
+    "fondo2":"#E2DEC4"
 }
 
 #Fuentes
@@ -62,6 +63,38 @@ QLabel#footer {{
 
 """
 
+menu_style = f"""
+
+    QMebuBar {{
+        background-color: {paleta['fondo']};
+        color: {paleta['texto']};
+    }}
+    
+    QMenuBar::item {{
+        background-color: {paleta['fondo2']};
+        padding: 6px 15px;
+    }}
+    
+    QMenuBar::item:selected {{
+        background-color: {paleta['fondo2']};
+    }}
+    
+    QMenu {{
+        background-color: {paleta['fondo2']};
+        color: {paleta['texto']};
+        border: 1px solid {paleta['detalle']};
+    }}
+    
+    QMenu::item {{
+        padding: 5px 25px;
+    }}
+    
+    QMenu::item:selected {{
+        background-color: {paleta['acento']}
+        color: black;
+    }}
+    
+"""
 
 #Aplicar estilos a objeto especifico con .setObjectName("nombre")
 #APlicar estilos a ese objeto con #nombre

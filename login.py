@@ -126,6 +126,10 @@ class LoginWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al conectar a la base de datos: {str(e)}")
 
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.handle_login()
+
 if __name__ == "__main__":
     import sys
     from PyQt6.QtWidgets import QApplication

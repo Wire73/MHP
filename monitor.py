@@ -3,13 +3,13 @@ import os, sys, sqlite3, bcrypt
 import pandas as pd
 from datetime import datetime
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QApplication,
     QPushButton, QLabel, QTableWidget, QTableWidgetItem, QFileDialog, QMessageBox 
 )
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.dates as mdates
 from matplotlib.figure import Figure
-from estilos import paleta, fuente
+from estilos import paleta, fuente, login_style, menu_style
 
 class MonitorWindow(QMainWindow):
     def __init__(self, usuario, rol):
@@ -23,7 +23,7 @@ class MonitorWindow(QMainWindow):
     def init_ui(self):
         self.setWindowTitle(f"MHP Monitoreo - {self.usuario} ({self.rol})")
         self.setGeometry(100, 100, 1000, 700)
-        self.setStyleSheet(f"background-color: {paleta['fondo']};")
+        self.setStyleSheet(login_style)
         
         #widgets
         self.table = QTableWidget()
@@ -36,41 +36,38 @@ class MonitorWindow(QMainWindow):
         self.ax.set_facecolor(paleta['fondo2'])
         self.canvas.figure.patch.set_facecolor(paleta['fondo2'])
         
-        #Botones
-        btns = {}
-        for key, txt in [
-            ("load", "Cargar CSV"),
-            ("export", "Exportar CSV"),
-            ("full", "Gráfica Completa"),
-            ("temp", "Grafica Temperatura"),
-            ("press", "Grafica Presión"),
-            ("logout", "Cerrar Sesión"),
-            ("exit", "Salir")
-        ]:
-            btns[key] = QPushButton(txt)
-            btns[key].setFont(fuente())
-            
-        btns["load"].clicked.connect(self.load_file)
-        btns["export"].clicked.connect(self.export_summary)
-        btns["full"].clicked.connect(self.show_both_graphs)
-        btns["temp"].clicked.connect(self.show_temperature_graph)
-        btns["press"].clicked.connect(self.show_pressure_graph)
-        btns["logout"].clicked.connect(self.logout)
-        btns["exit"].clicked.connect(self.close)
-            
-        #Admin Only
+        #Menu-Bar
+        menubar = self.menuBar()
+        menubar.setStyleSheet(menu_style)
+        
+        #Archivo Menú
+        archivo_menu = menubar.addMenu("Archivo")
+        
+        #Acciones: Cargar, Exportar, Nuevo usuario
+        load_action = archivo_menu.addAction("Cargar Archivo")
+        load_action.triggered.connect(self.load_file)
+        export_action = archivo_menu.addAction("Exportar Archivo")
+        export_action.triggered.connect(self.export_summary)
         if self.rol == "admin":
-            btns["new_user"] = QPushButton("Crear Nuevo Usuario")
-            btns["new_user"].setFont(fuente())
-            btns["new_user"].clicked.connect(self.create_user)
-            
-        #layouts
-        top_btns = QHBoxLayout()
-        for key in ["load", "export", "full", "temp", "press", "logout", "exit"]:
-            top_btns.addWidget(btns[key])
-        if "new_user" in btns:
-            top_btns.addWidget(btns["new_user"])
-            
+            new_user = archivo_menu.addAction("Crear Nuevo Usuario")
+            new_user.triggered.connect(self.create_user)
+        archivo_menu.addSeparator() #Crear linea de separación
+        logout_action = archivo_menu.addAction("Cerrar Sesión")
+        logout_action.triggered.connect(self.logout)
+        exit_action = archivo_menu.addAction("Salir")
+        exit_action.triggered.connect(self.close)
+        
+        #Vista Menu
+        vista_menu = menubar.addMenu("Vista")
+        
+        #Acciones: Mostrar gráficas y datos
+        full_graph = vista_menu.addAction("Gráficas Completas")
+        full_graph.triggered.connect(self.show_both_graphs)
+        temp_graph = vista_menu.addAction("Gráfica de Temperatura")
+        temp_graph.triggered.connect(self.show_temperature_graph)
+        press_graph = vista_menu.addAction("Gráfica de Presión")
+        press_graph.triggered.connect(self.show_pressure_graph)
+        
         left_panel = QVBoxLayout()
         left_panel.addWidget(self.table)
         left_panel.addWidget(self.total_lbl)
@@ -86,10 +83,15 @@ class MonitorWindow(QMainWindow):
             
         container = QWidget()
         layout = QVBoxLayout()
-        layout.addLayout(top_btns)
         layout.addLayout(main_area)
         container.setLayout(layout)
         self.setCentralWidget(container)
+        
+        #Centrar ventana
+        qr = self.frameGeometry()
+        cp = QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
         
     def load_file(self):
         path, _ = QFileDialog.getOpenFileName(self, "Abrir CSV", "", "CSV (*.csv)")
@@ -109,11 +111,12 @@ class MonitorWindow(QMainWindow):
         
     def update_table(self, df):
         self.table.clear()
+        columnas = [col for col in df.columns if col != "Tiempo_dt"]
         self.table.setRowCount(len(df))
-        self.table.setcolumnCount(3)
-        self.table.setHorizontalHeaderLabels(["Tiempo", "Temperatura", "Presión"])
+        self.table.setColumnCount(len(columnas))
+        self.table.setHorizontalHeaderLabels(columnas)
         for i, row in df.iterrows():
-            for j, col in enumerate(["Tiempo", "Temperatura", "Presión"]):
+            for j, col in enumerate(columnas):
                 val = row[col] if not pd.isna(row[col]) else "" 
                 self.table.setItem(i, j, QTableWidgetItem(str(val)))
         
@@ -216,10 +219,38 @@ class MonitorWindow(QMainWindow):
         
     def show_both_graphs(self):
         self.show_graphs("ambos")
+        self.update_table(self.df)
+        self.update_stats
+        
     def show_temperature_graph(self):
         self.show_graphs("temp")
+        temp_df = self.df[["Tiempo", "Temperatura", "Tiempo_dt"]].copy()
+        self.update_table(temp_df)
+        self.update_temperature_stats(temp_df)
+        
     def show_pressure_graph(self):
         self.show_graphs("press")
+        press_df = self.df[["Tiempo", "Presión", "Tiempo_dt"]].copy()
+        self.update_table(press_df)
+        self.update_pressure_stats(press_df)
+    
+    def update_temperature_stats(self, df):
+        tmax = df["Temperatura"].max()
+        t0t = df.loc[df["Temperatura"].idxmax(), "Tiempo"]
+        tav = df["Temperatura"].mean()
+        self.stats_lbl.setText(
+            f"Temperatura Máxima: {tmax:.2f}°C a las {t0t}\n"
+            f"Temperatura Promedio: {tav:.2f}°C"
+        )
+    
+    def update_pressure_stats(self, df):
+        pmax = df["Presión"].max()
+        p0t = df.loc[df["Presión"].idxmax(), "Tiempo"]
+        pav = df["Presión"].mean()
+        self.stats_lbl.setText(
+            f"Presión Máxima: {pmax:.2f}PSI a las {p0t}\n"
+            f"Presión Promedio: {pav:.2f}PSI"
+        )
             
 if __name__ == "__main__":
     import sys
