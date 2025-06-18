@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.dates as mdates
 from matplotlib.figure import Figure
-from estilos import PALETA, fuente
+from estilos import paleta, fuente
 
 class MonitorWindow(QMainWindow):
     def __init__(self, usuario, rol):
@@ -23,7 +23,7 @@ class MonitorWindow(QMainWindow):
     def init_ui(self):
         self.setWindowTitle(f"MHP Monitoreo - {self.usuario} ({self.rol})")
         self.setGeometry(100, 100, 1000, 700)
-        self.setStyleSheet(f"background-color: {PALETA['fondo']};")
+        self.setStyleSheet(f"background-color: {paleta['fondo']};")
         
         #widgets
         self.table = QTableWidget()
@@ -33,8 +33,8 @@ class MonitorWindow(QMainWindow):
         
         self.canvas = FigureCanvas(Figure(figsize=(5, 3)))
         self.ax = self.canvas.figure.add_subplot(111)
-        self.ax.set_facecolor(PALETA['fondo2'])
-        self.canvas.figure.patch.set_facecolor(PALETA['fondo2'])
+        self.ax.set_facecolor(paleta['fondo2'])
+        self.canvas.figure.patch.set_facecolor(paleta['fondo2'])
         
         #Botones
         btns = {}

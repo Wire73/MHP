@@ -2,11 +2,11 @@
 import os, sys, sqlite3, bcrypt
 from PyQt6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, 
-    QMessageBox, QApplication
+    QMessageBox, QApplication, QSpacerItem, QSizePolicy
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
-from estilos import PALETA, fuente
+from estilos import paleta, fuente, login_style
 
 class LoginWindow(QWidget):
     def __init__(self):
@@ -18,6 +18,9 @@ class LoginWindow(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        #Se aplican los estilos
+        self.setStyleSheet(login_style)
         
         #logo
         logo_lbl = QLabel()
@@ -43,6 +46,7 @@ class LoginWindow(QWidget):
         self.user_in = QLineEdit()
         self.user_in.setPlaceholderText("Usuario")
         self.user_in.setFont(fuente())
+        
         self.pwd_in = QLineEdit()
         self.pwd_in.setPlaceholderText("Contraseña")
         self.pwd_in.setEchoMode(QLineEdit.EchoMode.Password)
@@ -63,7 +67,29 @@ class LoginWindow(QWidget):
         btn_login.clicked.connect(self.handle_login)
         layout.addWidget(btn_login)
         
+        #Pie de página
+        footer_layout = QVBoxLayout()
+        footer = QLabel("© 2025 Martillos Hidráulicos de la Península - Todos los derechos reservados")
+        footer.setFont(fuente(9, italic=True))
+        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer.setObjectName("footer")
+        
+        footer2 = QLabel("Version 2.0")
+        footer2.setFont(fuente(9, italic=True))
+        footer2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer2.setObjectName("footer")
+        
+        footer_layout.addWidget(footer)
+        footer_layout.addWidget(footer2)
+        
+        layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+        layout.addLayout(footer_layout)
+        
         self.setLayout(layout)
+        qr = self.frameGeometry()
+        cp = QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
     
     def toggle_password(self):
         if self.pwd_in.echoMode() == QLineEdit.EchoMode.Normal:
